@@ -24,7 +24,7 @@ class Speech_Scraper:
         self.years = years 
     
 
-    def __get_link(self):
+    def get_link(self):
         """
         Gets links by year
         """
@@ -39,24 +39,24 @@ class Speech_Scraper:
 
         return final_links
     
-    def __get_speech_links(self):
+    def get_speech_links(self):
         master_links = {}
-        for link in self.__get_link(): 
+        for link in self.get_link(): 
             req = requests.get(link)
             soup = BeautifulSoup(req.text, 'lxml')
 
             year = int(re.search(r"(\d{4})-speeches", link).group(1))
-            hdr = soup.find(class_ ='col-xs-9 col-md-10 eventlist__event')
+            hdr = soup.find_all(class_ ='col-xs-9 col-md-10 eventlist__event')
             if not hdr:
                 continue 
-            i +=1 
-
-            link_tags = hdr.find_all('a', href=True)
             sublink = []
-            for el in link_tags:
-                link = el['href']
+
+            for el in hdr:
+                link_tag = el.find('a', href=True)
+                link = link_tag['href']
                 url = urljoin(BASE_URL, link)
                 sublink.append(url)
+                
             master_links[year] = sublink
         return master_links
     
@@ -69,7 +69,7 @@ class Speech_Scraper:
             date = date_tag.get_text(strip=True)
             print(date)
             text = text_tag.find_all('p')
-            speech:str = ''
+            speech:str = date + "\n"
             for para in text:
                 speech += para.get_text(strip=True)
             return speech  
@@ -79,7 +79,7 @@ class Speech_Scraper:
         
 
         
-    def parse_year_speeches(self, years: List[int], workers:int) :
+    def parse_year_speeches(self, workers:int) :
         """ 
         Function that returns the text of speeches by year and saves them 
         to a text file. 
@@ -92,19 +92,19 @@ class Speech_Scraper:
         int : The number of files that were parsed. 0 if there was an error
         """
         
-        master_dict = self.__get_speech_links()
+        master_dict = self.get_speech_links()
         # getting the links by year 
         shortlist = {}
         count = 0 
-        for val in years : 
+        for val in self.years : 
             links  = master_dict[val]
-            if links == None : 
+            if not links : 
                 print(f'Could not find links for year {val}')
                 return 0
             else : 
                 shortlist[val] = links 
         master_results = {}
-        for year, links in enumerate(shortlist):
+        for year, links in shortlist.items():
             result = [None] * len(links)
             with ThreadPoolExecutor(max_workers=workers) as executor:
                 futures = {executor.submit(self.thread_parse, link):i for i, link in enumerate(links)}
@@ -120,6 +120,19 @@ class Speech_Scraper:
             
             master_results[year] = result
         return master_results
+    
+    def __write_helper(self, file_name, speeches):
+        with open(file_name, 'w', encoding='utf-8') as file:
+            for speech in speeches:
+                file.write(speech + "\n")
 
-
+    def write_to_file(self, speech_dict:dict, num_workers):
+        titles = []
+        year_speech = []
+        for year, speeches in speech_dict.items():
+            titles.append(f'{year}_fed_speeches.txt')
+            year_speech.append(speeches)
+        
+        with ThreadPoolExecutor(max_workers=num_workers) as executor : 
+            executor.map(self.__write_helper, titles, year_speech )
 
