@@ -162,21 +162,22 @@ class Speech_Scraper:
         all_testimony = {}
         mpr_texts ={}
         for link in testimony_links:
-            print(link)
             request = requests.get(link)
             soup = BeautifulSoup(request.text, 'lxml')
             date_tag = soup.find('p', class_= 'article__time')
             date = date_tag.get_text(strip = True)
+            text_tag = soup.find('div', class_='col-xs-12 col-sm-8 col-md-8')
             
-            text_tag = soup.find_all(class_ = 'cols-12 col-sm-8 col-md-8')
             testimony =  ''
-            
-            paras  = text_tag.find_all('p')
+            if text_tag : 
+               
+                paras  = text_tag.find_all('p')
 
-            for text in paras : 
-                testimony += text.get_text(strip=True) + '\n'
+                for text in paras : 
+                    testimony += text.get_text(strip=True) + '\n'
+               
             all_testimony[date] = testimony
-        
+            print(testimony)
         for link in mpr_links:
             request = requests.get(link)
             
