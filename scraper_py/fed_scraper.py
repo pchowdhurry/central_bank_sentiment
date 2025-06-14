@@ -9,6 +9,8 @@ from typing import List
 from tqdm import tqdm
 BASE_URL = "https://www.federalreserve.gov"
 SPEECH_URL = "https://www.federalreserve.gov/newsevents/speeches.htm"
+# monetary policy report url 
+MPR_URL = 'https://www.federalreserve.gov/monetarypolicy/publications/mpr_default.htm'
 
 class Speech_Scraper:
     """
@@ -136,3 +138,67 @@ class Speech_Scraper:
         with ThreadPoolExecutor(max_workers=num_workers) as executor : 
             executor.map(self.__write_helper, titles, year_speech )
 
+    def get_policy_report_links(self):
+        mpr_report  =[]
+        testimony_links = []
+        request = requests.get(MPR_URL)
+        soup = BeautifulSoup(request.text, 'lxml')
+        links_tags = soup.find_all(class_= 'col-xs-12')
+        for el in links_tags:
+            for link in el.find_all('a', href= True):
+                href = link['href']
+                
+                if href.startswith('/newsevents/testimony'):
+                    testimony_links.append(urljoin(MPR_URL, href))
+                
+                elif href.startswith('/monetarypolicy'):
+                    mpr_report.append(urljoin(MPR_URL, href))
+                else : 
+                    continue 
+        return mpr_report, testimony_links
+
+    def get_policy_texts(self):
+        mpr_links , testimony_links = self.get_policy_report_links()
+        all_testimony = {}
+        mpr_texts ={}
+        for link in testimony_links:
+            print(link)
+            request = requests.get(link)
+            soup = BeautifulSoup(request.text, 'lxml')
+            date_tag = soup.find('p', class_= 'article__time')
+            date = date_tag.get_text(strip = True)
+            
+            text_tag = soup.find_all(class_ = 'cols-12 col-sm-8 col-md-8')
+            testimony =  ''
+            
+            paras  = text_tag.find_all('p')
+
+            for text in paras : 
+                testimony += text.get_text(strip=True) + '\n'
+            all_testimony[date] = testimony
+        
+        for link in mpr_links:
+            request = requests.get(link)
+            
+            soup = BeautifulSoup(request.text, 'lxml')
+            link_tags = soup.find_all(class_ = 't4_nav list_group sticky',id='t4_nav')
+            if link_tags : 
+                all_links = link_tags.find_all('a', href= True)
+                for url in all_links : 
+                    href = url['href']
+                    new_url = urljoin(BASE_URL, href)
+                    req = requests.get(new_url)
+                    soup = BeautifulSoup(req.text, 'lxml')
+                    text_tag = soup.find_all(class_ = 'col-xs-12 col-md-9')
+                    total_text = text_tag.find_all('p')
+                    text = ''
+                    date_tag = soup.find('p', class_= 'article__time')
+                    date = date_tag.get_text(strip = True)
+                    for chunk in total_text : 
+                        text += chunk.get_text(strip=True) + '\n'
+                    mpr_texts[date] = text
+            
+        return all_testimony, mpr_texts
+            
+
+            
