@@ -24,6 +24,12 @@ class ECB_Scraper :
         self.driver = None 
         self.curr_page = 0 
         self.scroll_num = scroll_num 
+        self.headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Connection': 'keep-alive',
+        }
 
     def __get_speech_page(self, scroll_num = None):
         if not self.driver: 
@@ -83,5 +89,78 @@ class ECB_Scraper :
             title = link.text 
             speeches[title] = href 
         return speeches 
+
+    def thread_parse(self, link: str) -> tuple:
+        """Parse a single speech page."""
+        # Skip PDFs
+        if link.endswith('.pdf'):
+            return None, None
+            
+        try:
+            time.sleep(2)  # Add delay between requests
+            req = requests.get(link, headers=self.headers)
+            if req.status_code != 200:
+                print(f'Failed to get page for {link}: status code {req.status_code}')
+                return None, None
+                
+            soup = BeautifulSoup(req.text, 'html.parser')
+            
+            # Extract date from URL
+            date_match = re.search(r'/date/(\d{4})/', link)
+            if not date_match:
+                return None, None
+            date = date_match.group(1)
+            
+            # Find the main content
+            content = []
+            
+            # Try different content selectors
+            main_content = (
+                soup.find('div', {'class': 'section'}) or 
+                soup.find('div', {'id': 'content'}) or
+                soup.find('div', {'class': 'content'}) or
+                soup.find('article')
+            )
+            
+            if main_content:
+                # Get all paragraphs and list items, excluding navigation elements
+                for elem in main_content.find_all(['p', 'li']):
+                    # Skip if element is part of navigation/menu
+                    if any(nav_class in str(elem.parent.get('class', [])) 
+                          for nav_class in ['nav', 'menu', 'navigation', 'sidebar']):
+                        continue
+                        
+                    text = elem.get_text(strip=True)
+                    if text and not text.isspace():
+                        # Skip short menu/navigation items
+                        if len(text) > 20:  
+                            content.append(text)
+            
+            if not content:
+                return None, None
+                
+            return date, content
+            
+        except Exception as e:
+            print(f'Error parsing {link}: {str(e)}')
+            return None, None
+
+    def get_speech_text(self, links: dict, num_workers: int = 4) -> dict:
+        """Get text content from speech links using multiple threads."""
+        results = {}
+        
+        with ThreadPoolExecutor(max_workers=num_workers) as executor:
+            futures = []
+            for title, url in links.items():
+                futures.append(executor.submit(self.thread_parse, url))
+            
+            for future in tqdm(as_completed(futures), total=len(futures), desc="Scraper Results"):
+                date, content = future.result()
+                if date and content:
+                    if date not in results:
+                        results[date] = []
+                    results[date].append(' '.join(content))
+        
+        return results
 
 
