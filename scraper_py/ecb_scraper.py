@@ -87,7 +87,7 @@ class ECB_Scraper :
         for link in links : 
             href = link.get('href')
             title = link.text 
-            speeches[title] = href 
+            speeches[title] = urljoin(self.base_url, href) 
         return speeches 
 
     def thread_parse(self, link: str) -> tuple:
@@ -97,13 +97,12 @@ class ECB_Scraper :
             return None, None
             
         try:
-            time.sleep(2)  # Add delay between requests
             req = requests.get(link, headers=self.headers)
             if req.status_code != 200:
                 print(f'Failed to get page for {link}: status code {req.status_code}')
                 return None, None
                 
-            soup = BeautifulSoup(req.text, 'html.parser')
+            soup = BeautifulSoup(req.text, 'lxml')
             
             # Extract date from URL
             date_match = re.search(r'/date/(\d{4})/', link)
@@ -112,33 +111,13 @@ class ECB_Scraper :
             date = date_match.group(1)
             
             # Find the main content
-            content = []
+            content = ""
             
             # Try different content selectors
-            main_content = (
-                soup.find('div', {'class': 'section'}) or 
-                soup.find('div', {'id': 'content'}) or
-                soup.find('div', {'class': 'content'}) or
-                soup.find('article')
-            )
-            
-            if main_content:
-                # Get all paragraphs and list items, excluding navigation elements
-                for elem in main_content.find_all(['p', 'li']):
-                    # Skip if element is part of navigation/menu
-                    if any(nav_class in str(elem.parent.get('class', [])) 
-                          for nav_class in ['nav', 'menu', 'navigation', 'sidebar']):
-                        continue
-                        
-                    text = elem.get_text(strip=True)
-                    if text and not text.isspace():
-                        # Skip short menu/navigation items
-                        if len(text) > 20:  
-                            content.append(text)
-            
-            if not content:
-                return None, None
-                
+            text_tag = soup.find_all('p')
+            print(text_tag)
+            for text in text_tag:
+                content += text.get_text(strip=True)
             return date, content
             
         except Exception as e:
@@ -158,8 +137,9 @@ class ECB_Scraper :
                 date, content = future.result()
                 if date and content:
                     if date not in results:
-                        results[date] = []
-                    results[date].append(' '.join(content))
+                        results[date] = [content]
+                    else : 
+                        results[date].append(content)
         
         return results
 
