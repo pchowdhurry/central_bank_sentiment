@@ -114,9 +114,11 @@ class ECB_Scraper :
             content = ""
             
             # Try different content selectors
-            text_tag = soup.find_all('p')
-            print(text_tag)
-            for text in text_tag:
+            section = soup.select('div.section > p')
+            print(section)
+            
+           
+            for text in section:
                 content += text.get_text(strip=True)
             return date, content
             
