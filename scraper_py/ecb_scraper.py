@@ -14,7 +14,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
 SPEECH_URL = "https://www.ecb.europa.eu/press/pubbydate/html/index.en.html?name_of_publication=Speech"
-
+BULLETIN_URL = 'https://www.ecb.europa.eu/press/economic-bulletin/articles/html/index.en.html'
 
 class ECB_Scraper : 
     def __init__(self, years: List[int], scroll_num=None):
@@ -31,23 +31,31 @@ class ECB_Scraper :
             'Connection': 'keep-alive',
         }
 
-    def __get_speech_page(self, scroll_num = None):
+    def __get_speech_page(self, scroll_num = None, link = None):
         if not self.driver: 
             self.driver = Chrome()
-        
+        url = self.speech_url 
+        if link != None : 
+            url = link 
         try: 
-            self.driver.get(self.speech_url)
+            self.driver.get(url)
             wait  = WebDriverWait(self.driver, 30)
-            wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.title > a")))
+            if link == BULLETIN_URL:
+                wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.lazy-load.loaded")))
+            else : 
+                wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.title > a")))
             time.sleep(5)
             prev_height = self.driver.execute_script("return document.body.scrollHeight")
-
+            prev_count = 0
+            i = 0 
             if not scroll_num : 
                 while True : 
-                    self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-                    time.sleep(3)
+                    self.driver.execute_script("window.scrollBy(0, 1500);")
+                    time.sleep(5)
                     new_height = self.driver.execute_script("return document.body.scrollHeight")
                     # if we are done scrolling to the end fo the page 
+                    curr_count = len(self.driver.find_elements(By.CSS_SELECTOR, "div.lazy-load.loaded"))
+                    print(f"Scroll {i+1}: {curr_count} containers loaded")
                     if prev_height==new_height: 
                         break 
                     else : 
@@ -55,10 +63,12 @@ class ECB_Scraper :
                         self.curr_page += 1 
                 return self.driver.page_source 
             elif scroll_num>0:
-                for k in range(scroll_num):
-                    self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-                    time.sleep(3)
+                for i in range(scroll_num):
+                    self.driver.execute_script("window.scrollBy(0, 1500);")
+                    time.sleep(5)
                     new_height = self.driver.execute_script("return document.body.scrollHeight")
+                    curr_count = len(self.driver.find_elements(By.CSS_SELECTOR, "div.lazy-load.loaded"))
+                    print(f"Scroll {i+1}: {curr_count} containers loaded")
                     if prev_height==new_height: 
                         break 
                     else : 
@@ -69,7 +79,7 @@ class ECB_Scraper :
                 raise ValueError("scroll number must be an integer")
         except Exception as e: 
             print(f'inputted scroll number {scroll_num} is not an integer')
-        finally: 
+        finally:
             self.driver.quit()
 
     def get_speech_links(self ):
@@ -144,5 +154,40 @@ class ECB_Scraper :
                         results[date].append(content)
         
         return results
+    
+    def get_econ_bulletin_links(self, years: List[int]): 
+        link_types = 'https://www.ecb.europa.eu/press/economic-bulletin/articles/{}/html/index_include.en.html'
+        all_links = []
+        for year in years : 
+            link = link_types.format(year)
+            all_links.append(link)
+            print(link)
+        
+        links =[]
+        
+        for url in all_links :
+            req = requests.get(url, headers=self.headers)
+        
+            soup = BeautifulSoup(req.text, 'lxml')
+            link_elements = soup.select("div.title")
+            print(link_elements[0])
+
+            
+            
+            for container in link_elements : 
+                try:    
+                    title = container.text.strip()
+                    link = container.select_one("a")["href"]
+                  
+                    links.append(( title, urljoin(self.base_url, link)))
+                except Exception as e: 
+                    print(f'Could not find link for speech')
+                    continue
+        return links 
+        
+            
+        
+
+
 
 
