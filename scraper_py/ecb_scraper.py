@@ -117,20 +117,35 @@ class ECB_Scraper :
             # Extract date from URL
             date_match = re.search(r'/date/(\d{4})/', link)
             if not date_match:
-                return None, None
-            date = date_match.group(1)
+                # Find the main content
+                date_match = re.search(r'/articles/(\d{4})/', link)
+                date = date_match.group(1)
+                print(date)
+                content = ""
+                
+                # Try different content selectors
+                section = soup.select('div.section > p')
+                print(section)
+                
             
-            # Find the main content
-            content = ""
+                for text in section:
+                    content += text.get_text(strip=True)
+                return  date, content
+            else: 
+                
+                date = date_match.group(1)
+                
+                # Find the main content
+                content = ""
+                
+                # Try different content selectors
+                section = soup.select('div.section > p')
+                print(section)
+                
             
-            # Try different content selectors
-            section = soup.select('div.section > p')
-            print(section)
-            
-           
-            for text in section:
-                content += text.get_text(strip=True)
-            return date, content
+                for text in section:
+                    content += text.get_text(strip=True)
+                return date, content
             
         except Exception as e:
             print(f'Error parsing {link}: {str(e)}')
@@ -163,7 +178,7 @@ class ECB_Scraper :
             all_links.append(link)
             print(link)
         
-        links =[]
+        links ={}
         
         for url in all_links :
             req = requests.get(url, headers=self.headers)
@@ -179,12 +194,16 @@ class ECB_Scraper :
                     title = container.text.strip()
                     link = container.select_one("a")["href"]
                   
-                    links.append(( title, urljoin(self.base_url, link)))
+                    links[title] = urljoin(self.base_url, link)
+                    print(urljoin(self.base_url, link))
+
                 except Exception as e: 
                     print(f'Could not find link for speech')
                     continue
         return links 
-        
+    
+    def get_buletin_texts(self, links): 
+        return self.get_speech_text(links)
             
         
 
