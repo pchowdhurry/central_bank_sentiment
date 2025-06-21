@@ -8,6 +8,7 @@
 #include<stdexcept>
 #include<fstream> 
 #include <cctype>  // for isascii
+#include <pqxx/pqxx>
 
 bool is_ascii_only(const std::string& sentence) {
     for (char c : sentence) {
@@ -90,7 +91,6 @@ Doc::Doc(const string& file_name){
 }
 
 int Doc::write_to_file() const {
-    std::regex sentence_regex(R"(([^.!?\n]+[.!?]))"); // Match full sentences
     string total_text = this->file_text; 
     string out_name = "Text for " + this->file_name+".txt"; 
     

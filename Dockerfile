@@ -1,22 +1,24 @@
 # Start with Ubuntu
 FROM ubuntu:22.04
 
-# Install C++ tools and Poppler library
+# Install C++ tools, PostgreSQL libs, and Poppler
 RUN apt-get update && apt-get install -y \
     build-essential \
     g++ \
     make \
-    gdb \ 
+    git \
     pkg-config \
     libpoppler-cpp-dev \
     poppler-utils \
+    libpqxx-dev \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory inside container
+# Set the working directory
 WORKDIR /app
 
-# Copy everything from your computer into the container
+# Copy project files into the container
 COPY . .
 
-# Final command: open a terminal
+# Default command
 CMD ["bash"]

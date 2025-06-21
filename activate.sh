@@ -1,12 +1,9 @@
 #!/bin/bash
 
-# Only build if the image doesn't exist
-if ! docker image inspect text_analysis:latest >/dev/null 2>&1; then
-  echo "🔧 Building Docker image (first time only)..."
-  docker build -t text_anaysis .
-else
-  echo "✅ Docker image already exists. Skipping build."
-fi
+IMAGE_NAME="text_analysis"
 
-# Run the container
-docker run -it  -v "$PWD":/app text_analysis
+echo "🔧 Rebuilding Docker image from scratch..."
+docker build --no-cache -t "$IMAGE_NAME" .
+
+echo "🚀 Launching container..."
+docker run -it --rm -v "$PWD":/app -w /app "$IMAGE_NAME" bash
