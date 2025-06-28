@@ -6,6 +6,7 @@
 
 # Cache and temporary files
 cache/
+data
 *.log
 *.pyc 
 __pycache__/
