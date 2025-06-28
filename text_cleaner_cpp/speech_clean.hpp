@@ -19,7 +19,7 @@ class Clean_Text{
    int num_sentences = 0; 
    std::string date ; 
 
-   bool is_ascii(const std::string& sentence)
+   bool is_ascii_only(const std::string& sentence);
 
    public : 
    // Constructor for class 
@@ -41,7 +41,7 @@ class Clean_Text{
   const std::string& password, 
   const std::string& host , 
   const int port, 
-  const std::string table_name = "speeches");
+  const std::string& table_name = "speeches");
 
   // Method that get information about the text and object 
 
@@ -52,14 +52,15 @@ class Clean_Text{
   void get_file() const; 
 
   // This will show each sentence stored in the vector of sentences 
-  std::vector get_sentenes() const ; 
+  std::vector<std::string> get_sentenes() const ; 
 
   // This will show the cleaned text 
-  void get_clean_text() const 
+  void get_clean_text() const;
   
   // This will print the count of sentences to the console 
   int get_sentence_count() const ;
 
-}
+};
+
 #endif 
 

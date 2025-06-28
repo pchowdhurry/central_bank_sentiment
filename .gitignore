@@ -1,8 +1,47 @@
+# PDF files
 *.pdf 
+
+# Text files (be careful - you might want to keep some)
 *.txt 
+
+# Cache and temporary files
 cache/
-data/ 
 *.log
 *.pyc 
 __pycache__/
+*.pkl
+# Data directory
+data/ 
+
+# Cython build artifacts
+text_cleaner_cpp/speech_clean_wrapper.cpp
+text_cleaner_cpp/speech_clean_wrapper.cpython-*.so
+text_cleaner_cpp/build/
+text_cleaner_cpp/*.so
+
+# Temporary files
+text_cleaner_cpp/=3.0.*
+
+# Generated output files
+text_cleaner_cpp/*_cleaned.txt
+text_cleaner_cpp/cleaned_*.txt
+
+# Python cache
+*.pyc
+__pycache__/
+.pytest_cache/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker
+.dockerignore
+
 

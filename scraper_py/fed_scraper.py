@@ -215,40 +215,75 @@ class FedScraper:
         
         # Process testimonies
         for link in testimony_links:
-            request = requests.get(link)
-            soup = BeautifulSoup(request.text, 'lxml')
-            date_tag = soup.find('p', class_='article__time')
-            date = date_tag.get_text(strip=True)
-            
-            text_tag = soup.find_all(class_='col-xs-12 col-sm-8 col-md-8')
-            testimony = ''
-            paras = text_tag.find_all('p')
-
-            for text in paras:
-                testimony += text.get_text(strip=True) + '\n'
-            all_testimony[date] = testimony
+            try:
+                request = requests.get(link)
+                soup = BeautifulSoup(request.text, 'lxml')
+                
+                # Find date - using select_one for more reliable selection
+                date_tag = soup.select_one('p.article__time')
+                if not date_tag:
+                    print(f"No date found for {link}")
+                    continue
+                    
+                date = date_tag.get_text(strip=True)
+                print(f"Processing testimony from {date}")
+                
+                # Find content - using select for more reliable selection
+                content_div = soup.select_one('div.col-xs-12.col-sm-8.col-md-8')
+                if not content_div:
+                    print(f"No content found for {link}")
+                    continue
+                    
+                # Get all paragraphs from the content
+                paras = content_div.select('p')
+                testimony = '\n'.join(p.get_text(strip=True) for p in paras)
+                
+                if testimony:
+                    all_testimony[date] = testimony
+                
+            except Exception as e:
+                print(f"Error processing testimony {link}: {str(e)}")
+                continue
         
         # Process MPR reports
         for link in mpr_links:
-            request = requests.get(link)
-            soup = BeautifulSoup(request.text, 'lxml')
-            link_tags = soup.find_all(class_='t4_nav list_group sticky', id='t4_nav')
-            
-            if link_tags:
-                all_links = link_tags.find_all('a', href=True)
-                for url in all_links:
-                    href = url['href']
-                    new_url = urljoin(BASE_URL, href)
-                    req = requests.get(new_url)
-                    soup = BeautifulSoup(req.text, 'lxml')
-                    text_tag = soup.find_all(class_='col-xs-12 col-md-9')
-                    total_text = text_tag.find_all('p')
-                    text = ''
-                    date_tag = soup.find('p', class_='article__time')
-                    date = date_tag.get_text(strip=True)
-                    for chunk in total_text:
-                        text += chunk.get_text(strip=True) + '\n'
-                    mpr_texts[date] = text
+            try:
+                request = requests.get(link)
+                soup = BeautifulSoup(request.text, 'lxml')
+                
+                # Find navigation links
+                nav_div = soup.select_one('div.t4_nav.list-group.sticky#t4_nav')
+                if nav_div:
+                    links = nav_div.select('a[href]')
+                    
+                    for url in links:
+                        href = url['href']
+                        new_url = urljoin(BASE_URL, href)
+                        req = requests.get(new_url)
+                        sub_soup = BeautifulSoup(req.text, 'lxml')
+                        
+                        expression = re.fullmatch(r"https://www\.federalreserve\.gov/monetarypolicy/(\d{4})-(\d{2})-mpr-[\w\-]+\.htm", new_url)
+                        if not expression : 
+                            print(f'error : {new_url}')
+                        if expression : 
+                            year = expression.group(1)
+                            month = expression.group(2)
+                            date = f'{year}-{month}'
+                        
+                            content_div = sub_soup.select_one('div.col-xs-12.col-md-9')
+                            if not content_div:
+                                continue
+                                
+                            paras = content_div.select('p')
+                            text = '\n'.join(p.get_text(strip=True) for p in paras)
+                            print(text)
+                            
+                            if text:
+                                mpr_texts[date] = text
+                        
+            except Exception as e:
+                print(f"Error processing MPR {link}: {str(e)}")
+                continue
             
         return all_testimony, mpr_texts
             
