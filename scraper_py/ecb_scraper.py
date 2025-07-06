@@ -34,7 +34,7 @@ class ECB_Scraper :
     def __get_speech_page(self, scroll_num = None, link = None):
         if not self.driver: 
             self.driver = Chrome()
-        url = self.speech_url 
+        url = self.speech_url
         if link != None : 
             url = link 
         try: 

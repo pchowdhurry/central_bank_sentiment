@@ -40,8 +40,9 @@ WORKDIR /app
 # Copy project files into the container
 COPY . .
 
-# Build the Cython extension (from the correct directory)
+# Build the Cython extensions
 RUN cd text_cleaner_cpp && conda run -n text310 python setup_cython.py build_ext --inplace
+RUN cd pdf_parser_cpp && conda run -n text310 python parser_setup.py build_ext --inplace
 
 # Set up conda environment activation in bashrc (after conda init)
 RUN echo "conda activate text310" >> ~/.bashrc

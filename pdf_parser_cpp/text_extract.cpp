@@ -114,3 +114,18 @@ void Doc::show_file(){
 void Doc::show_page(){
     std::cout << this->num_pages << std::endl ; 
 }
+
+std::string Doc::get_text() const {
+    return this->file_text  ;
+}
+
+std::string Doc::get_filename() const{
+    return this->file_name ; 
+}
+int Doc::get_num_pages()const{
+    return this->num_pages; 
+}
+
+std::vector<std::string> Doc::get_sentences() const{
+    return this->sentences;
+}
